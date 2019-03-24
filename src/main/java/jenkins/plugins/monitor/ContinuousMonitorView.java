@@ -9,7 +9,6 @@ import hudson.model.Hudson;
 import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.ListView;
-import hudson.model.StreamBuildListener;
 import hudson.model.ViewDescriptor;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -32,7 +31,7 @@ public class ContinuousMonitorView extends ListView {
     private final static Logger logger = Logger.getLogger(ContinuousMonitorView.class);
 
     private static final String MANAGED_PLUGINS_PLUGIN_NAME = "Continuous-Monitor";
-    private static final String JENKINS_TEST_ENVIRONMENT_SYSTEM_VARIABLE = "Test_Environment";
+    private static final String MAVEN_JOB_ENVIRONMENT_RUNTIME_VARIABLE = "test.env=";
     public static final String DEFAULT_BRANCH_NAME = "master";
     private final int MILLISECONDS_IN_A_MINUTE = 60000;
     private final double MINUTES_IN_AN_HOUR = 60.0;
@@ -167,6 +166,7 @@ public class ContinuousMonitorView extends ListView {
         long percentCompleted = 0;
         Object itemFromJob = findItemByJobName(jobName);
         if (itemFromJob instanceof WorkflowJob) {
+
             WorkflowJob workflowJob = (WorkflowJob) itemFromJob;
             WorkflowRun lastBuild = workflowJob.getLastBuild();
             long duration;
@@ -187,6 +187,7 @@ public class ContinuousMonitorView extends ListView {
                 }
             }
         } else if (itemFromJob instanceof WorkflowMultiBranchProject) {
+
             WorkflowMultiBranchProject job = (WorkflowMultiBranchProject) itemFromJob;
             WorkflowJob workflowJob = job.getItemByBranchName(DEFAULT_BRANCH_NAME);
             WorkflowRun lastBuild = workflowJob.getLastBuild();
@@ -208,11 +209,11 @@ public class ContinuousMonitorView extends ListView {
                 }
             }
         } else {
+
             AbstractProject tli = (AbstractProject) findItemByJobName(jobName);
             AbstractBuild lastBuild = tli.getLastBuild();
             long duration;
             long estimatedDuration;
-
             if (lastBuild.isBuilding()) {
                 duration = System.currentTimeMillis() - lastBuild.getTimeInMillis();
                 estimatedDuration = lastBuild.getEstimatedDuration();
@@ -293,31 +294,41 @@ public class ContinuousMonitorView extends ListView {
 
         Object itemFromJob = findItemByJobName(jobName);
         if (itemFromJob instanceof WorkflowJob) {
+
             WorkflowJob workflowJob = (WorkflowJob) itemFromJob;
             WorkflowRun lastBuild = workflowJob.getLastBuild();
-            if (lastBuild.isBuilding()) {
+            if (null == lastBuild) {
+                logger.info(String.format("Unable to find last build for job named '%s", jobName));
+            } else if (lastBuild.isBuilding()) {
                 return workflowJob.getBuilds().getLastBuild();
             } else {
                 return lastBuild;
             }
         } else if (itemFromJob instanceof WorkflowMultiBranchProject) {
+
             WorkflowMultiBranchProject job = (WorkflowMultiBranchProject) itemFromJob;
             WorkflowJob workflowJob = job.getItemByBranchName(DEFAULT_BRANCH_NAME);
             WorkflowRun lastBuild = workflowJob.getLastBuild();
-            if (lastBuild.isBuilding()) {
+            if (null == lastBuild) {
+                logger.info(String.format("Unable to find last build for job named '%s", jobName));
+            } else if (lastBuild.isBuilding()) {
                 return workflowJob.getBuilds().getLastBuild();
             } else {
                 return lastBuild;
             }
         } else {
+
             AbstractProject abstractProject = (AbstractProject) itemFromJob;
             AbstractBuild lastBuild = abstractProject.getLastBuild();
-            if (lastBuild.isBuilding()) {
+            if (null == lastBuild) {
+                logger.info(String.format("Unable to find last build for job named '%s", jobName));
+            } else if (lastBuild.isBuilding()) {
                 return abstractProject.getBuilds().getLastBuild();
             } else {
                 return lastBuild;
             }
         }
+        return null;
     }
 
     /**
@@ -340,12 +351,12 @@ public class ContinuousMonitorView extends ListView {
 
             Collection<Job> secondLevelJobs = (Collection<Job>) allTopLevelItem.getAllJobs();
             for (Job secondLevelJob : secondLevelJobs) {
+
                 if (secondLevelJob instanceof WorkflowJob) {
                     if (StringUtils.containsIgnoreCase(secondLevelJob.getName(), jobName)) {
                         logger.debug(String.format("Found Workflow Job Name Match.  Expected='%s' :: Actual='%s'", jobName, secondLevelJob.getName()));
                         return secondLevelJob;
                     }
-
                 } else {
                     if (StringUtils.containsIgnoreCase(secondLevelJob.getName(), jobName)) {
                         logger.debug(String.format("Found Abstract Job Name Match.  Expected='%s' :: Actual='%s'", jobName, secondLevelJob.getName()));
@@ -406,14 +417,12 @@ public class ContinuousMonitorView extends ListView {
                 WorkflowRun workflowRun = (WorkflowRun) lastBuild;
                 Reader initialReader = workflowRun.getLogReader();
                 String targetString = IOUtils.toString(initialReader);
-                String lastRunEnv = StringUtils.substringBetween(targetString, "test.env=", " ").trim();
-                return lastRunEnv;
+                return StringUtils.substringBetween(targetString, MAVEN_JOB_ENVIRONMENT_RUNTIME_VARIABLE, " ").trim();
             } else {
                 AbstractBuild abstractBuild = (AbstractBuild) lastBuild;
                 Reader initialReader = abstractBuild.getLogReader();
                 String targetString = IOUtils.toString(initialReader);
-                String lastRunEnv = StringUtils.substringBetween(targetString, "test.env=", " ").trim();
-                return lastRunEnv;
+                return StringUtils.substringBetween(targetString, MAVEN_JOB_ENVIRONMENT_RUNTIME_VARIABLE, " ").trim();
             }
         } catch (Exception e) {
             e.printStackTrace();
