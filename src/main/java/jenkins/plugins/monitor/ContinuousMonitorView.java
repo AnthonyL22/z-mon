@@ -407,14 +407,12 @@ public class ContinuousMonitorView extends ListView {
                 Reader initialReader = workflowRun.getLogReader();
                 String targetString = IOUtils.toString(initialReader);
                 String lastRunEnv = StringUtils.substringBetween(targetString, "test.env=", " ").trim();
-                logger.info("found A!!!! " + lastRunEnv);
                 return lastRunEnv;
             } else {
                 AbstractBuild abstractBuild = (AbstractBuild) lastBuild;
                 Reader initialReader = abstractBuild.getLogReader();
                 String targetString = IOUtils.toString(initialReader);
                 String lastRunEnv = StringUtils.substringBetween(targetString, "test.env=", " ").trim();
-                logger.info("found B !!!! " + lastRunEnv);
                 return lastRunEnv;
             }
         } catch (Exception e) {
