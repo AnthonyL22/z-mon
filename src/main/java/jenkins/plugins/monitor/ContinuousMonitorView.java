@@ -1,20 +1,17 @@
 package jenkins.plugins.monitor;
 
-import hudson.EnvVars;
 import hudson.Extension;
 import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Hudson;
 import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.ListView;
-import hudson.model.Run;
 import hudson.model.StreamBuildListener;
 import hudson.model.ViewDescriptor;
-import hudson.model.listeners.RunListener;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
@@ -24,11 +21,9 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 
 import javax.servlet.ServletException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.Reader;
 import java.math.BigDecimal;
-import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.List;
 
@@ -112,22 +107,6 @@ public class ContinuousMonitorView extends ListView {
     }
 
     /**
-     * Get last job execution environment variable
-     *
-     * @return last run environment information
-     */
-    private String getLastEnvironmentVars() {
-
-        StringBuilder envVariablesBuilder = new StringBuilder();
-        EnvVars envVars = getLastRunEnvVariables(actualNameJob1);
-        for (String envVar : envVars.keySet()) {
-            envVariablesBuilder.append(envVar);
-            envVariablesBuilder.append(" ");
-        }
-        return envVariablesBuilder.toString();
-    }
-
-    /**
      * Get last test environment name defined in the system variable Test_Environment
      *
      * @param jobName Jenkins job
@@ -135,13 +114,12 @@ public class ContinuousMonitorView extends ListView {
      */
     private String getLastTestEnv(final String jobName) {
 
-        EnvVars envVars = getLastRunEnvVariables(jobName);
-        for (String envVar : envVars.keySet()) {
-            if (StringUtils.containsIgnoreCase(envVar, JENKINS_TEST_ENVIRONMENT_SYSTEM_VARIABLE)) {
-                return "ENV: " + envVars.get(envVar);
-            }
+        String environment = getLastRunEnvVariables(jobName);
+        if (StringUtils.isNotEmpty(environment)) {
+            return environment;
+        } else {
+            return "";
         }
-        return "";
     }
 
     /**
@@ -285,7 +263,6 @@ public class ContinuousMonitorView extends ListView {
             return workflowJob.getShortUrl();
         } else if (itemFromJob instanceof WorkflowMultiBranchProject) {
             WorkflowMultiBranchProject job = (WorkflowMultiBranchProject) itemFromJob;
-            logger.info("special here");
             return getShortUrl(job);
         } else {
             AbstractProject tli = (AbstractProject) findItemByJobName(jobName);
@@ -421,32 +398,24 @@ public class ContinuousMonitorView extends ListView {
      * @param jobName Jenkins job name
      * @return last job execution environment variables
      */
-    private EnvVars getLastRunEnvVariables(final String jobName) {
+    private String getLastRunEnvVariables(final String jobName) {
 
-        StreamBuildListener listener;
         try {
-            Computer e = Computer.currentComputer();
-            Charset charset = null;
-            if (e != null) {
-                charset = e.getDefaultCharset();
-            }
-
-            Object e1;
             Object lastBuild = getLastBuild(jobName);
             if (lastBuild instanceof WorkflowRun) {
                 WorkflowRun workflowRun = (WorkflowRun) lastBuild;
-                e1 = new FileOutputStream(workflowRun.getLogFile());
-                listener = new StreamBuildListener((OutputStream) e1, charset);
-                Run build = workflowRun;
-                RunListener.fireStarted(build, listener);
-                return workflowRun.getEnvironment(listener);
+                Reader initialReader = workflowRun.getLogReader();
+                String targetString = IOUtils.toString(initialReader);
+                String lastRunEnv = StringUtils.substringBetween(targetString, "test.env=", " ").trim();
+                logger.info("found A!!!! " + lastRunEnv);
+                return lastRunEnv;
             } else {
                 AbstractBuild abstractBuild = (AbstractBuild) lastBuild;
-                e1 = new FileOutputStream(abstractBuild.getLogFile());
-                listener = new StreamBuildListener((OutputStream) e1, charset);
-                Run build = abstractBuild;
-                RunListener.fireStarted(build, listener);
-                return abstractBuild.getEnvironment(listener);
+                Reader initialReader = abstractBuild.getLogReader();
+                String targetString = IOUtils.toString(initialReader);
+                String lastRunEnv = StringUtils.substringBetween(targetString, "test.env=", " ").trim();
+                logger.info("found B !!!! " + lastRunEnv);
+                return lastRunEnv;
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -535,10 +504,6 @@ public class ContinuousMonitorView extends ListView {
         BigDecimal bd = new BigDecimal(unRounded);
         BigDecimal rounded = bd.setScale(precision, roundingMode);
         return rounded.doubleValue();
-    }
-
-    public String getEnvironmentVarsCompleted() {
-        return getLastEnvironmentVars();
     }
 
     public String getJob1LastTestEnv() {
