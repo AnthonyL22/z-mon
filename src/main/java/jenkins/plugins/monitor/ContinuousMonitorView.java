@@ -32,7 +32,7 @@ public class ContinuousMonitorView extends ListView {
 
     private static final String MANAGED_PLUGINS_PLUGIN_NAME = "Continuous-Monitor";
     private static final String MAVEN_JOB_ENVIRONMENT_RUNTIME_VARIABLE = "test.env=";
-    public static final String DEFAULT_BRANCH_NAME = "master";
+    private static final String DEFAULT_BRANCH_NAME = "master";
     private final int MILLISECONDS_IN_A_MINUTE = 60000;
     private final double MINUTES_IN_AN_HOUR = 60.0;
 
