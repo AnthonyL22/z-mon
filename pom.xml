@@ -80,7 +80,7 @@
     <surefire.junit.version>2.18.1</surefire.junit.version>
     <versions-maven-plugin.version>2.1</versions-maven-plugin.version>
     <workflow-job.version>2.15</workflow-job.version>
-    <workflow-multibranch.version>2.21</workflow-multibranch.version>
+    <workflow-multibranch.version>2.19</workflow-multibranch.version>
   </properties>
   <dependencies>
     <dependency>
@@ -272,6 +272,14 @@
         <groupId>com.github.ekryd.sortpom</groupId>
         <artifactId>sortpom-maven-plugin</artifactId>
         <version>${sortpom-maven-plugin.version}</version>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>8</source>
+          <target>8</target>
+        </configuration>
       </plugin>
     </plugins>
   </build>
