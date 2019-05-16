@@ -298,7 +298,7 @@ public class ContinuousMonitorView extends ListView {
             WorkflowJob workflowJob = (WorkflowJob) itemFromJob;
             WorkflowRun lastBuild = workflowJob.getLastBuild();
             if (null == lastBuild) {
-                logger.info(String.format("Unable to find last build for job named '%s", jobName));
+                logger.debug(String.format("Unable to find last build for job named '%s", jobName));
             } else if (lastBuild.isBuilding()) {
                 return workflowJob.getBuilds().getLastBuild();
             } else {
@@ -309,7 +309,7 @@ public class ContinuousMonitorView extends ListView {
             WorkflowMultiBranchProject job = (WorkflowMultiBranchProject) itemFromJob;
             WorkflowRun lastBuild = getLastWorkflowRunFromMultiBranch(job);
             if (null == lastBuild) {
-                logger.info(String.format("Unable to find last build for job named '%s", jobName));
+                logger.debug(String.format("Unable to find last build for job named '%s", jobName));
             } else if (lastBuild.isBuilding()) {
                 return lastBuild;
             } else {
@@ -320,7 +320,7 @@ public class ContinuousMonitorView extends ListView {
             AbstractProject abstractProject = (AbstractProject) itemFromJob;
             AbstractBuild lastBuild = abstractProject.getLastBuild();
             if (null == lastBuild) {
-                logger.info(String.format("Unable to find last build for job named '%s", jobName));
+                logger.debug(String.format("Unable to find last build for job named '%s", jobName));
             } else if (lastBuild.isBuilding()) {
                 return abstractProject.getBuilds().getLastBuild();
             } else {
@@ -416,15 +416,19 @@ public class ContinuousMonitorView extends ListView {
                 WorkflowRun workflowRun = (WorkflowRun) lastBuild;
                 Reader initialReader = workflowRun.getLogReader();
                 String targetString = IOUtils.toString(initialReader);
-                return StringUtils.substringBetween(targetString, MAVEN_JOB_ENVIRONMENT_RUNTIME_VARIABLE, " ").trim();
+                if (StringUtils.containsIgnoreCase(targetString, MAVEN_JOB_ENVIRONMENT_RUNTIME_VARIABLE)) {
+                    return StringUtils.substringBetween(targetString, MAVEN_JOB_ENVIRONMENT_RUNTIME_VARIABLE, " ").trim();
+                }
             } else {
                 AbstractBuild abstractBuild = (AbstractBuild) lastBuild;
                 Reader initialReader = abstractBuild.getLogReader();
                 String targetString = IOUtils.toString(initialReader);
-                return StringUtils.substringBetween(targetString, MAVEN_JOB_ENVIRONMENT_RUNTIME_VARIABLE, " ").trim();
+                if (StringUtils.containsIgnoreCase(targetString, MAVEN_JOB_ENVIRONMENT_RUNTIME_VARIABLE)) {
+                    return StringUtils.substringBetween(targetString, MAVEN_JOB_ENVIRONMENT_RUNTIME_VARIABLE, " ").trim();
+                }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            e.getMessage();
         }
         return null;
     }
@@ -493,7 +497,7 @@ public class ContinuousMonitorView extends ListView {
         List<WorkflowRun> allRuns = new ArrayList<>();
 
         Collection<WorkflowJob> items = multiBranchProject.getItems();
-        logger.info(String.format("Found %s branches in MultiBranch project", items.size()));
+        logger.debug(String.format("Found %s branches in MultiBranch project", items.size()));
 
         for (WorkflowJob item : items) {
             allRuns.add(item.getLastBuild());
@@ -504,10 +508,10 @@ public class ContinuousMonitorView extends ListView {
                     .max(Comparator.comparing(WorkflowRun::getTimeInMillis))
                     .orElse(allRuns.get(0));
         } catch (Exception e) {
-            e.printStackTrace();
+            e.getMessage();
         }
 
-        logger.info(String.format("Returning last MultiBranch project found named '%s' at %s",
+        logger.debug(String.format("Returning last MultiBranch project found named '%s' at %s",
                 lastRun.getFullDisplayName(), lastRun.getTime()));
         return lastRun;
 
