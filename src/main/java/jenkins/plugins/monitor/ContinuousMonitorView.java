@@ -30,13 +30,15 @@ import java.util.List;
 
 public class ContinuousMonitorView extends ListView {
 
-    private final static Logger logger = Logger.getLogger(ContinuousMonitorView.class);
+
+    private static final Logger logger = Logger.getLogger(ContinuousMonitorView.class);
 
     private static final String MANAGED_PLUGINS_PLUGIN_NAME = "Continuous-Monitor";
     private static final String MAVEN_JOB_ENVIRONMENT_RUNTIME_VARIABLE = "test.env=";
-    private final int MILLISECONDS_IN_A_MINUTE = 60000;
-    private final double MINUTES_IN_AN_HOUR = 60.0;
+    private static final int MILLISECONDS_RANGE = 60000;
+    private static final double MINUTES_RANGE = 60.0;
 
+    private String refresh;
     private String teamName;
     private String teamLogoURL;
     private String environmentVars;
@@ -58,8 +60,6 @@ public class ContinuousMonitorView extends ListView {
     private String displayNameJob6;
     private String displayNameJob7;
     private String displayNameJob8;
-
-    private String refresh;
 
     @DataBoundConstructor
     public ContinuousMonitorView(String name) {
@@ -107,7 +107,7 @@ public class ContinuousMonitorView extends ListView {
     }
 
     /**
-     * Get last test environment name defined in the system variable Test_Environment
+     * Get last test environment name defined in the system variable Test_Environment.
      *
      * @param jobName Jenkins job
      * @return last test environment name (dev, test, prod)
@@ -123,7 +123,7 @@ public class ContinuousMonitorView extends ListView {
     }
 
     /**
-     * Get current build duration for a Jenkins job
+     * Get current build duration for a Jenkins job.
      *
      * @param jobName Jenkins job
      * @return build duration for a Jenkins job
@@ -134,7 +134,7 @@ public class ContinuousMonitorView extends ListView {
         if (itemFromJob instanceof WorkflowJob) {
             WorkflowJob workflowJob = (WorkflowJob) itemFromJob;
             if (workflowJob.getLastBuild().isBuilding()) {
-                return convertDurationToDisplay((System.currentTimeMillis() - workflowJob.getLastBuild().getTimeInMillis()));
+                return convertDurationToDisplay(System.currentTimeMillis() - workflowJob.getLastBuild().getTimeInMillis());
             } else {
                 return convertDurationToDisplay(workflowJob.getLastBuild().getDuration());
             }
@@ -142,14 +142,14 @@ public class ContinuousMonitorView extends ListView {
             WorkflowMultiBranchProject job = (WorkflowMultiBranchProject) itemFromJob;
             WorkflowRun lastBuild = getLastWorkflowRunFromMultiBranch(job);
             if (lastBuild.isBuilding()) {
-                return convertDurationToDisplay((System.currentTimeMillis() - lastBuild.getTimeInMillis()));
+                return convertDurationToDisplay(System.currentTimeMillis() - lastBuild.getTimeInMillis());
             } else {
                 return convertDurationToDisplay(lastBuild.getDuration());
             }
         } else {
             AbstractProject abstractProject = (AbstractProject) itemFromJob;
             if (abstractProject.getLastBuild().isBuilding()) {
-                return convertDurationToDisplay((System.currentTimeMillis() - abstractProject.getLastBuild().getTimeInMillis()));
+                return convertDurationToDisplay(System.currentTimeMillis() - abstractProject.getLastBuild().getTimeInMillis());
             } else {
                 return convertDurationToDisplay(abstractProject.getLastBuild().getDuration());
             }
@@ -157,7 +157,7 @@ public class ContinuousMonitorView extends ListView {
     }
 
     /**
-     * Get the percentage completed of a Jenkins job execution duration
+     * Get the percentage completed of a Jenkins job execution duration.
      *
      * @param jobName Jenkins job name
      * @return percentage completed of entire job execution duration
@@ -233,7 +233,7 @@ public class ContinuousMonitorView extends ListView {
     }
 
     /**
-     * Get the time elapsed since the last run of the Jenkins job
+     * Get the time elapsed since the last run of the Jenkins job.
      *
      * @param jobName Jenkins job name
      * @return time elapsed since last run in .ms
@@ -243,10 +243,10 @@ public class ContinuousMonitorView extends ListView {
         Object lastBuild = getLastBuild(jobName);
         if (lastBuild instanceof WorkflowRun) {
             WorkflowRun workflowRun = (WorkflowRun) lastBuild;
-            return convertDurationToDisplay((System.currentTimeMillis() - workflowRun.getTimeInMillis()));
+            return convertDurationToDisplay(System.currentTimeMillis() - workflowRun.getTimeInMillis());
         } else {
             AbstractBuild abstractBuild = (AbstractBuild) lastBuild;
-            return convertDurationToDisplay((System.currentTimeMillis() - abstractBuild.getTimeInMillis()));
+            return convertDurationToDisplay(System.currentTimeMillis() - abstractBuild.getTimeInMillis());
         }
     }
 
@@ -331,44 +331,46 @@ public class ContinuousMonitorView extends ListView {
     }
 
     /**
-     * Find job by job name wherever it may be in the stack
+     * Find job by job name wherever it may be in the stack.
      *
      * @param jobName desired Jenkins job to find
      * @return matching Jenkins job
      */
     private Object findItemByJobName(String jobName) {
 
-        List<Item> allTopLevelItems = Hudson.getInstanceOrNull().getAllItems();
-        for (Item allTopLevelItem : allTopLevelItems) {
+        try {
+            List<Item> allTopLevelItems = Hudson.getInstanceOrNull().getAllItems();
+            for (Item allTopLevelItem : allTopLevelItems) {
 
-            if (allTopLevelItem instanceof WorkflowMultiBranchProject) {
-                if (StringUtils.containsIgnoreCase(allTopLevelItem.getName(), jobName)) {
+                if (allTopLevelItem instanceof WorkflowMultiBranchProject && StringUtils.containsIgnoreCase(allTopLevelItem.getName(), jobName)) {
                     logger.debug(String.format("Found WorkflowMultiBranchProject Job Name Match.  Expected='%s' :: Actual='%s'", jobName, allTopLevelItem.getName()));
                     return allTopLevelItem;
                 }
-            }
 
-            Collection<Job> secondLevelJobs = (Collection<Job>) allTopLevelItem.getAllJobs();
-            for (Job secondLevelJob : secondLevelJobs) {
+                Collection<Job> secondLevelJobs = (Collection<Job>) allTopLevelItem.getAllJobs();
+                for (Job secondLevelJob : secondLevelJobs) {
 
-                if (secondLevelJob instanceof WorkflowJob) {
-                    if (StringUtils.containsIgnoreCase(secondLevelJob.getName(), jobName)) {
-                        logger.debug(String.format("Found Workflow Job Name Match.  Expected='%s' :: Actual='%s'", jobName, secondLevelJob.getName()));
-                        return secondLevelJob;
-                    }
-                } else {
-                    if (StringUtils.containsIgnoreCase(secondLevelJob.getName(), jobName)) {
-                        logger.debug(String.format("Found Abstract Job Name Match.  Expected='%s' :: Actual='%s'", jobName, secondLevelJob.getName()));
-                        return secondLevelJob;
+                    if (secondLevelJob instanceof WorkflowJob) {
+                        if (StringUtils.containsIgnoreCase(secondLevelJob.getName(), jobName)) {
+                            logger.debug(String.format("Found Workflow Job Name Match.  Expected='%s' :: Actual='%s'", jobName, secondLevelJob.getName()));
+                            return secondLevelJob;
+                        }
+                    } else {
+                        if (StringUtils.containsIgnoreCase(secondLevelJob.getName(), jobName)) {
+                            logger.debug(String.format("Found Abstract Job Name Match.  Expected='%s' :: Actual='%s'", jobName, secondLevelJob.getName()));
+                            return secondLevelJob;
+                        }
                     }
                 }
             }
+        } catch (Exception e) {
+            logger.debug("Error occurred exception=" + e.getCause());
         }
         return null;
     }
 
     /**
-     * Get last job status
+     * Get last job status.
      *
      * @param jobName Jenkins job name
      * @return last job status
@@ -376,7 +378,7 @@ public class ContinuousMonitorView extends ListView {
     private String getLastRunPassFailAborted(final String jobName) {
 
         String lastBuildStatusSummary = getLastRunStatus(jobName).toLowerCase();
-        if ((lastBuildStatusSummary.equals(Status.STABLE_STATUS)) || (lastBuildStatusSummary.equals(Status.BACK_TO_NORMAL_STATUS))) {
+        if (StringUtils.equals(lastBuildStatusSummary, Status.STABLE_STATUS) || lastBuildStatusSummary.equals(Status.BACK_TO_NORMAL_STATUS)) {
             return Status.PASS_STATUS;
         } else if (lastBuildStatusSummary.equals(Status.ABORTED_STATUS)) {
             return Status.ABORTED_STATUS;
@@ -385,7 +387,7 @@ public class ContinuousMonitorView extends ListView {
     }
 
     /**
-     * Get last Jenkins job run status
+     * Get last Jenkins job run status.
      *
      * @param jobName Jenkins job name
      * @return last job status
@@ -403,7 +405,7 @@ public class ContinuousMonitorView extends ListView {
     }
 
     /**
-     * Get last job execution environment variables
+     * Get last job execution environment variables.
      *
      * @param jobName Jenkins job name
      * @return last job execution environment variables
@@ -436,7 +438,7 @@ public class ContinuousMonitorView extends ListView {
     }
 
     /**
-     * Get the current status for a Jenkins job
+     * Get the current status for a Jenkins job.
      *
      * @param jobName Jenkins job name
      * @return current job status
@@ -509,43 +511,41 @@ public class ContinuousMonitorView extends ListView {
             lastRun = allRuns.stream()
                     .max(Comparator.comparing(WorkflowRun::getTimeInMillis))
                     .orElse(allRuns.get(0));
+            logger.debug(String.format("Returning last MultiBranch project found named '%s' at %s",
+                    lastRun.getFullDisplayName(), lastRun.getTime()));
         } catch (Exception e) {
-            e.getMessage();
+            logger.debug(String.format("Exception %s", e.getCause()));
         }
-
-        logger.debug(String.format("Returning last MultiBranch project found named '%s' at %s",
-                lastRun.getFullDisplayName(), lastRun.getTime()));
         return lastRun;
-
     }
 
     /**
-     * Convert the duration in MS to readable format
+     * Convert the duration in MS to readable format.
      *
      * @param durationInMillis job duration in MS
      * @return HTML used for reporting job duration
      */
     private String convertDurationToDisplay(final long durationInMillis) {
 
-        long durationInMinutes = durationInMillis / MILLISECONDS_IN_A_MINUTE;
-        if (durationInMinutes > MINUTES_IN_AN_HOUR) {
-            return round(durationInMinutes / MINUTES_IN_AN_HOUR, 2, BigDecimal.ROUND_HALF_UP) + " hours";
+        long durationInMinutes = durationInMillis / MILLISECONDS_RANGE;
+        if (durationInMinutes > MINUTES_RANGE) {
+            return round(durationInMinutes / MINUTES_RANGE, 2, BigDecimal.ROUND_HALF_UP) + " hours";
         } else {
             return durationInMinutes + " min" + ((durationInMinutes == 1) ? "" : "s");
         }
     }
 
     /**
-     * Round the number of minutes in an hour up
+     * Round the number of minutes in an hour up.
      *
      * @param unRounded    un-rounded minutes
      * @param precision    level of precision
      * @param roundingMode mode to round up/down
-     * @return
+     * @return rounded number
      */
     private static double round(double unRounded, int precision, int roundingMode) {
 
-        BigDecimal bd = new BigDecimal(unRounded);
+        BigDecimal bd = new BigDecimal(String.valueOf(unRounded));
         BigDecimal rounded = bd.setScale(precision, roundingMode);
         return rounded.doubleValue();
     }

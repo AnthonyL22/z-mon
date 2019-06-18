@@ -65,16 +65,19 @@
   </distributionManagement>
   <properties>
     <commons-lang3.version>3.8.1</commons-lang3.version>
-    <java_code.version>1.8</java_code.version>
+    <java.version>1.8</java.version>
     <jenkins-core.version>2.85</jenkins-core.version>
     <lifecycle-mapping.version>1.0.0</lifecycle-mapping.version>
     <log4j.version>1.2.17</log4j.version>
     <maven-compiler-plugin.version>3.1</maven-compiler-plugin.version>
     <maven-hpi-plugin.version>1.95</maven-hpi-plugin.version>
+    <maven-pmd-plugin.version>3.12.0</maven-pmd-plugin.version>
     <maven-scm-plugin.version>1.8.1</maven-scm-plugin.version>
     <maven-scm-provider-gitxexe.version>1.9</maven-scm-provider-gitxexe.version>
-    <maven.compiler.source>${java_code.version}</maven.compiler.source>
-    <maven.compiler.target>${java_code.version}</maven.compiler.target>
+    <maven.checkstyle.plugin.version>2.17</maven.checkstyle.plugin.version>
+    <maven.compiler.source>${java.version}</maven.compiler.source>
+    <maven.compiler.target>${java.version}</maven.compiler.target>
+    <maven.findbugs.plugin.version>3.0.4</maven.findbugs.plugin.version>
     <netbeans-insane.version>RELEASE73</netbeans-insane.version>
     <sortpom-maven-plugin.version>2.6.0</sortpom-maven-plugin.version>
     <surefire.junit.version>2.18.1</surefire.junit.version>
@@ -179,13 +182,81 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>${maven-compiler-plugin.version}</version>
           <configuration>
-            <source>${java_code.version}</source>
-            <target>${java_code.version}</target>
+            <source>${java.version}</source>
+            <target>${java.version}</target>
           </configuration>
         </plugin>
       </plugins>
     </pluginManagement>
     <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>findbugs-maven-plugin</artifactId>
+        <version>${maven.findbugs.plugin.version}</version>
+        <configuration>
+          <failOnError>true</failOnError>
+          <xmlOutput>true</xmlOutput>
+          <findbugsXmlOutputDirectory>${project.build.directory}/sonar</findbugsXmlOutputDirectory>
+          <xmlOutputDirectory>${project.build.directory}/sonar</xmlOutputDirectory>
+          <outputDirectory>${project.build.directory}/sonar</outputDirectory>
+          <excludeFilterFile>${project.basedir}/findbugs-exclude-filter.xml</excludeFilterFile>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-pmd-plugin</artifactId>
+        <version>${maven-pmd-plugin.version}</version>
+        <executions>
+          <execution>
+            <id>pmd-validation</id>
+            <goals>
+              <goal>pmd</goal>
+              <goal>cpd</goal>
+              <goal>check</goal>
+              <goal>cpd-check</goal>
+            </goals>
+            <phase>verify</phase>
+            <configuration>
+              <sourceEncoding>utf-8</sourceEncoding>
+              <minimumTokens>100</minimumTokens>
+              <targetJdk>${java.version}</targetJdk>
+              <outputDirectory>${project.build.directory}/pmd</outputDirectory>
+              <targetDirectory>${project.build.directory}/pmd</targetDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>${maven.checkstyle.plugin.version}</version>
+        <configuration>
+          <configLocation>checkstyle.xml</configLocation>
+          <consoleOutput>true</consoleOutput>
+          <failsOnError>true</failsOnError>
+          <failOnViolation>true</failOnViolation>
+          <violationSeverity>warning</violationSeverity>
+          <includeTestSourceDirectory>false</includeTestSourceDirectory>
+          <sourceDirectory>${basedir}/src/main/java</sourceDirectory>
+          <testSourceDirectory>${basedir}/src/test/java</testSourceDirectory>
+          <outputFile>${basedir}/target/checkstyle/checkstyle-output.xml</outputFile>
+          <cacheFile>${basedir}/target/checkstyle/checkstyle-cachefile</cacheFile>
+        </configuration>
+        <executions>
+          <execution>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-gpg-plugin</artifactId>
